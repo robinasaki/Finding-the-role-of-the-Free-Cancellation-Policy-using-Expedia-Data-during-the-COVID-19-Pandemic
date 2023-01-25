@@ -1,0 +1,364 @@
+---
+title: "Finding the role of the free cancellation policy using Expedia data"
+author: "Group 144: Robin Mao, Zheyu Zhou, Cowell Tang"
+subtitle: "Hi can I cancel my reservation? The government locked us up again."
+date: March 31, 2022
+output:
+  beamer_presentation:
+    theme: "Pittsburgh"
+    colortheme: "orchid"
+    fonttheme: "structurebold"
+    slide_level: 2
+classoption: "aspectratio=169"
+fontsize: 11pt
+urlcolor: blue
+header-includes:
+  - \usepackage{multicol}
+  - \usepackage{caption} 
+  - \captionsetup{skip=0pt,belowskip=0pt}
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# echo=FALSE will stop the code chunk from appearing in the knit document
+# warning=FALSE and message=FALSE will stop R messages from appearing in the knit document
+library(tidyverse)
+library(knitr)
+library(lubridate)
+library(kableExtra)
+library(readr)
+library(tidyr)
+library(dplyr)
+
+# here is the data for this project
+expedia_data <- read_csv("ExpediaSearchData.csv")
+
+# see the Project Overview page for more information: 
+# https://q.utoronto.ca/courses/235890/pages/project-overview
+
+#summary(lm1)
+```
+
+## Overall Introduction
+
+  Ever since the pandemic, global tourism experienced uncountable lost. As the tourism industry is recovering nowadays, people restarted to travel again. However, due to the uncertainity brought by the COVID-19 variants and government policies, the **cancellation policy** of the properties became relatively more critical. Therefore, we found it meaningful and educational to investigate research questions related to the **cancellation policy** of the properties using data from Expedia. Now, let us begin.
+
+## Research Question #01:
+
+\textcolor{red}{What is the range of plausible values for the stay duration for properties with and without first listing free cancellation?}
+
+1.\textcolor{blue}{Introduction}\
+  -This research question is given due to my personal experiences, which states that first listing free cancellation is necessary due to the uncertainty brought by the COVID-19 pandemic. 
+  
+2.\textcolor{blue}{Objective}\
+  -In this research question, our goal is to create two **bootstrap confidence intervals** in order for the next research question to proceed.
+  
+3.\textcolor{blue}{Data Summary}\
+  -In this case, the population refers to all Expedia search data done between 2021-06-01 and 2021-07-31. The three variables we used are *checkout_date*,*checkin_date* and *is_free_cancellation1*.
+
+## Statistical Methods
+
+\textcolor{red}{Bootstrap Confidence Interval}
+
+1.\textcolor{blue}{Reason}\
+  -Bootstrap confidence interval can provide the **variation** of the population based on the samples, outputting a range of plausible values\
+  
+2.\textcolor{blue}{Advantages}\
+  -Requires only a small sample size\
+  -More creditable, more intuitive\
+  -Demonstrates the variation of the population
+
+## Visualisation & Conclusion
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=1.5, fig.width=2.3}
+
+expedia_data %>%
+  mutate(duration = checkout_date - checkin_date) -> new_data
+
+new_data %>%
+  select(duration,is_free_cancellation1) -> selected_data
+
+set.seed(144)
+#With free cancellation
+selected_data %>%
+  filter(is_free_cancellation1 == 1) -> with_cancellation
+#Create a data frame
+with_cancellation %>%
+  slice_sample(n = 100, replace = FALSE) -> with_sample
+#Simulation
+w_n_sample <- dim(with_sample)[1]
+n_bootstrap_simulations <- 2000
+bootsrap_test_stat <- rep(NA, n_bootstrap_simulations)
+for (i in 1:n_bootstrap_simulations){
+  bootsrap_test_stat[i] <- with_sample %>%
+    slice_sample(n=w_n_sample,replace=TRUE) %>%
+    summarise(mean_duration = mean(duration)) %>% as.numeric()
+}
+bootstrap_sampling_distribution <- tibble(mean_duration = bootsrap_test_stat)
+#Quantiles
+boot_means <- rep(NA,5000)
+for (i in 1:5000){
+  boot_samp <- with_sample %>% sample_n(size=200,replace=TRUE)
+  boot_means[i] <-
+    as.numeric(boot_samp %>%
+                 summarise(mean_duration_q = mean(duration)))
+}
+boot_means <- tibble(mean_duration_q = boot_means)
+quantile(boot_means$mean_duration_q, c(0.025,0.975)) -> quantiles_with
+#Graphing
+bootstrap_sampling_distribution %>%
+  ggplot(aes(x=mean_duration))+
+  geom_histogram(color='black',
+                 fill='gray')+
+#Adding quantile visualisation
+  geom_vline(xintercept=2.81,
+            color='blue')+
+  geom_vline(xintercept=3.49,
+            color='blue')+
+  labs(x = 'median stay duration',
+       title = 'with free cancellation')
+
+set.seed(130)
+#Without free cancellation
+selected_data %>%
+  filter(is_free_cancellation1 == 0) -> without_cancellation
+#Create a data frame
+without_cancellation %>%
+  slice_sample(n = 100, replace = FALSE) -> without_sample
+#Simulation
+wo_n_sample <- dim(without_sample)[1]
+boostrap_test_stat2 <- rep(NA, n_bootstrap_simulations)
+for (i in 1:n_bootstrap_simulations){
+  boostrap_test_stat2[i] <- without_sample %>%
+    slice_sample(n=wo_n_sample,replace=TRUE) %>%
+    summarise(mean_duration2 = mean(duration)) %>% as.numeric()
+}
+bootstrap_sampling_distribution2 <- tibble(mean_duration2 = boostrap_test_stat2)
+#Quantiles
+boot_means2 <- rep(NA,5000)
+for (i in 1:5000){
+  boot_samp2 <- without_sample %>% sample_n(size=200,replace=TRUE)
+  boot_means2[i] <-
+    as.numeric(boot_samp2 %>%
+                 summarise(mean_duration_q2 = mean(duration)))
+}
+boot_means2 <- tibble(mean_duration_q2 = boot_means2)
+quantile(boot_means2$mean_duration_q2,c(0.025,0.975)) -> quantiles_without
+#Graphing
+bootstrap_sampling_distribution2 %>%
+  ggplot(aes(x=mean_duration2))+
+  geom_histogram(color='black',
+                 fill='gray')+
+#Adding quantile visualisation
+  geom_vline(xintercept=2.52,
+            color='blue')+
+  geom_vline(xintercept=3.73,
+            color='blue')+
+  labs(x = 'median stay duration',
+       title = 'no free cancellation')
+  
+```
+
+Each of these graph demonstrates a confidence interval on one sample statistics.\
+\textcolor{gray}{The exact x-values of the blue intervals are included in the next slide}
+
+## Results & Conclusion: Research Question #01
+
+\textcolor{blue}{Chart:exact x-value of the intervals}\
+
+|                | Properties with first listing free cancellation | Properties without first listing free cancellation |
+|----------------|-------------------------------------------------|----------------------------------------------------|
+| First quantile |                      2.815                      |                        2.525                       |
+| Third quantile |                      3.490                      |                        3.730                       |
+
+We can conclude that **we are 95% confident that the true means of the stay duration for properties with and without first listing free cancellation lie between the two intervals**
+
+\textcolor{blue}{Limitation}: In this case, the limitation refers to the fact that the model is true only using data during the pandemic. This means that if you use any pre-pandemic data onto the sampling distribution, the accuracy will be greatly reduced.
+
+## Research Question #02:
+
+\textcolor{red}{Will booking can be canceled without extra fees have a higher star rating?}
+
+1.\textcolor{blue}{Introduction}\
+  -When we travel, we like to use online booking to book hotels in advance. We always pay attention to the rating of accommodation when choosing.Therefore, I am interested in whether a free cancellation policy will increase the rating of a property.
+
+2.\textcolor{blue}{Objective}\
+  -In this research question, our goal is to create three scatterplots in order to find out the **association** between the variables.
+  
+3.\textcolor{blue}{Data summary}\
+  -In this case, the population refers to all Expedia search data done between 2021-06-01 and 2021-07-31. The two variables we use are *is_free_cancellation1* and *star_rating*.
+  
+## Statistical Methods
+\textcolor{red}{Simple Linear Regression}
+
+1.\textcolor{blue}{Reason}\
+  -A simple linear regression can demonsrate the association between the variables. With the correct model, we can also make prediction about future variables.
+  
+2.\textcolor{blue}{Advantages}\
+  -Easy to implement\
+  -Interpret and effcient to train\
+  -We can make predictions based on the model\
+  
+## Visualisation
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=1.2, fig.width=2}
+
+expedia_data <- expedia_data %>% 
+  mutate(free_cancellation1 = ifelse(is_free_cancellation1,"Yes","No"))
+expedia_data <- expedia_data %>%
+  mutate(free_cancellation2 = ifelse(is_free_cancellation2,"Yes","No"))
+expedia_data <- expedia_data %>%
+  mutate(free_cancellation3 = ifelse(is_free_cancellation3,"Yes","No"))
+
+lm1 <- lm(star_rating1 ~ free_cancellation1, data = expedia_data)
+
+lm2 <- lm(star_rating2 ~ free_cancellation2, data = expedia_data)
+
+lm3 <- lm(star_rating3 ~ free_cancellation3, data = expedia_data)
+
+expedia_data %>%
+  ggplot(aes(x=free_cancellation1,y=star_rating1))+
+  geom_boxplot(color='black',fill='gray')+
+  labs(x='Free cancellation policy',
+       y='Star rating',
+       title='First listing')
+
+expedia_data %>%
+  ggplot(aes(x=free_cancellation2,y=star_rating2))+
+  geom_boxplot(color='black',fill='gray')+
+  labs(x='Free cancellation policy',
+       y='Star rating',
+       title='Second listing')
+
+```
+
+
+In this case, a \textcolor{blue}{linear regression} is performed between the *is_free_cancellation* and *star_rating*.
+The first graph demonstrates almost no difference between properties with different first listing free cancellation policy.\
+The second graph demonstrates that there is an outliner, representing a extreme value for samples with second listing free cancellation policy.\
+However, the differences are demonstrated in the \textcolor{red}{chart} in the next slide, showing the difference between the \textcolor{red}{exact values}.\
+\textcolor{gray}{We decided to show these graphs to provide a more intuitive visualisation of the data.}
+
+## Results
+
+\textcolor{blue}{Table: Coefficient-Level Estimates for a Model Fitted to Estimate Variation in Star Rating}\
+
+\textcolor{gray}{The graph of third listing was ignored due to the limit on space, however the data is kept here.}
+
+|                       | Predictor         | B    | SE    | t     | p      |
+|-----------------------|-------------------|------|-------|-------|--------|
+| First Listed Booking  | Intercept         | 3.63 | 0.045 | 80.68 | <0.001 |
+|                       | Free Cancellation | 0.17 | 0.057 | 2.93  | 0.004  |
+| Second Listed Booking | Intercept         | 3.68 | 0.045 | 81.14 | <0.001 |
+|                       | Free Cancellation | 0.07 | 0.057 | 1.33  | 0.185  |
+| Third Listed Booking  | Intercept         | 3.57 | 0.044 | 80.57 | <0.001 |
+|                       | Free Cancellation | 0.19 | 0.056 | 3.43  | <0.001 |
+\textcolor{gray}{For general audiances, the p-value is what matters the most in this case.}
+
+## Conclusion:Research Question #02
+
+\textcolor{red}{1.}The chart shows an average difference of \textcolor{blue}{0.17} in the response variable *star_rating1* between different free cancellation policies. The p-value is \textcolor{blue}{0.004}, which represents whether the observed relationship also exist in the greater population.\
+  -Therefore, the chart demonstrates \textcolor{red}{a significant linear relation} between the free cancellation policy and star rating \textcolor{blue}{in the first listed booking}.\
+  
+  
+\textcolor{red}{2.}The chart shows an average difference of \textcolor{blue}{0.07} in the response variable *star_rating1* between different free cancellation policies. The p-value is \textcolor{blue}{0.185}, which represents whether the observed relationship also exist in the greater population.\
+  -Therefore, the chart demonstrates \textcolor{red}{no significant linear relation} between the free cancellation policy and star rating \textcolor{blue}{in the second listed booking}.\
+  
+  
+\textcolor{red}{3.}Using the same method above, we can say that the chart demonstrates \textcolor{red}{a significant linear relation} between the free cancellation policy and star rating \textcolor{blue}{in the third listed booking}.\
+
+## Limitation:
+\textcolor{blue}{Limitation}: The limitation is the assumption of \textcolor{blue}{linearity} between the dependent and independent variables. However, in the real world, data are rarely linear separable. Thus, the existance of non-linear associations might decrease the accuracy.
+
+## Research Question #03:
+
+1.\textcolor{blue}{Question}\
+  -Is the proportion of first listed booking with free cancellation 60%?
+  
+2.\textcolor{blue}{Motivation}\
+  -As the previous research questions address on the relation between free cancellation policies and other factors, we found it meaningful to find whether the proportion of first listed booking with free cancellation equals 60%. We choose 60% as on our first glimpse of the data set, there were about 60% of the properties that have free cancellation.
+  
+## Statistical Methods
+\textcolor{red}{One Proportional Hypothesis Test}
+
+1.\textcolor{blue}{Variable Used}\
+  -The number of the first listed booking can be canceled freely and the number of the first listed booking cannot be canceled freely.
+  
+2.\textcolor{blue}{Data Wrangling}\
+  -Created a new variable that return "Yes" when first listed booking can be canceled freely and "No" when the first listed booking cannot be canceled freely.
+  
+3.\textcolor{blue}{Statistical Method}\
+  -The statistical method chose is \textcolor{blue}{one proportional hypothesis test}. This inference creates simulations under the assumption that the *null hypothesis* is correct, and checks for extreme cases relaitve to the test statistics. This can be used to verify the strength of evidence against the null hypothesis. Because if the test statistic is very rare across all simulations, the null hypothesis has a lower chance being true. Vice versa, the null hypothesis is more likely to be true.
+
+## Visualisation
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=1.25, fig.width=2.25, fig.align='center'}
+
+expedia_data <- expedia_data %>% 
+  mutate(free_cancellation = ifelse(is_free_cancellation1,"Yes","No"))
+ggplot(data = expedia_data, aes(x = free_cancellation))+
+  geom_bar()+
+  labs(x = "free cancellation")
+
+```
+
+-The bar plot clearly indicates that the distribution of whether the first listed booking can be canceled freely. The number of the first listed booking having free cancellation, which is around \textcolor{blue}{600}, is \textcolor{red}{1.5 times} to the first listed booking having not, which is around \textcolor{blue}{400}.
+
+## Hypotheses
+
+  -The **null hypothesis** for this question is that the proportion of the first listed booking that has free cancellation is 60%. The **alternative hypothesis** for this question is that the proportion of the first listed booking that has free cancellation is not 60%.\
+   $$H_0: p_{free \space cancellation}= 0.6$$
+  
+   $$H_A: p_{free \space cancellation} \neq 0.6$$
+  
+  -The **test statistic** which is the proportion of the first listed booking that has free cancellation is 0.614.
+  
+## Result & Conclusion:Research Question #03
+
+  -We run 10000 times simulations by assuming the assumption is true and find the pvalue\
+  \textcolor{gray}{This step is to find how rare the test statistic is}
+
+```{r fig.align='center', fig.height=2.8, fig.width=2.5, message=FALSE, warning=FALSE, include=FALSE}
+
+library(dplyr)
+test_statistic <- expedia_data %>% 
+  filter(free_cancellation == "Yes") %>% 
+  group_by(free_cancellation) %>% 
+  summarise(n = n())
+test_statistic <- as.numeric(test_statistic)/1000
+
+set.seed(115)
+n = 1000
+reps <- 10000
+my_sims <- rep(NA, reps)
+for (i in 1:reps){
+  my_sim <- sample(c("Yes","No"),
+                   size = n, prob = c (0.6, 0.4), replace = TRUE)
+  my_sims[i] <- sum(my_sim == "Yes")/1000
+}
+sim <- tibble(prop_yes = my_sims) 
+sim %>% 
+  ggplot(aes(x = prop_yes))+
+  geom_histogram(binwidth = 0.01)+
+  geom_vline(xintercept = 0.6 - abs(0.6 - 0.614))+
+  geom_vline(xintercept = 0.6 + abs(0.6 - 0.614))
+  labs(x = "Propotion of first listed booking that have free cancellation")
+
+pvalue <- sim %>% 
+  filter(abs(prop_yes -0.6) >= abs(test_statistic -0.6)) %>% 
+  summarise(p_value = n() / reps)
+pvalue
+
+```
+-Based on the p-value is equal to 0.1931, we can conclude that we have no evidence to against the null hypothesis that the proportion of booking of first listed that has free cancellation 60%
+
+| test statistic |  pvalue |
+|----------------|---------|
+| 0.614          | 0.1931  |
+
+\textcolor{blue}{Limitation}: The concluding result from the hypothesis test are based on the p-value and therefore cannot be expressed with full certainty. We also cannot deny the probability of a \textcolor{blue}{type II error}, which is fail to reject the *null hypothesis* when the *null hypothesis* is wrong.
+
+## Final Conclusion
+
+-As this is a research question, it would be necessary for us to conclude our result relative to our initial question.\
+-Using the Expedia data, we can conclude that the first listing cancellation policy of the properties does affect the \textcolor{red}{stay duration} and \textcolor{red}{star rating}. And we can state that the proportion of booking with first listed free cancellation is **60%**. In advance, we can say that people do tend to care about the cancellation policy while booking properties during during the pandemic. We guess COVID really changed a lot of things, right?
