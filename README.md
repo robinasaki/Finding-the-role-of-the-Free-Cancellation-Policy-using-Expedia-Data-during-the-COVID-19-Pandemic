@@ -3,9 +3,10 @@
   
 #### Author: Chenxu (Robin) Mao, Zheyu (Esper) Zhou, Jingyu (Cowell) Tang
 
-##### A final project for STA130H1: An Introduction to Statistical Reasoning and Data Science, University of Toronto St.George. Winter 2021.
 
 This project analyse three questions using different statistical methods with data given by Expedia.
+
+
 ##### 1. 'What is the range of plausible values for the stay duration for properties with and without first listing free cancellation?'
   > method: bootsrap confidence interval
   
@@ -15,3 +16,4 @@ This project analyse three questions using different statistical methods with da
 ##### 3. 'Is the proportion of first listed booking with free cancellation 60%?'
   > one proportional hypothesis test
   
+##### A final project for STA130H1: An Introduction to Statistical Reasoning and Data Science, University of Toronto St.George. Winter 2021.
