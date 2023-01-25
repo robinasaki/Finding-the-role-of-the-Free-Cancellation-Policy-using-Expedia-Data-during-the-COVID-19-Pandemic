@@ -1,7 +1,7 @@
 # Expedia_FreeCancellation_Analysis:
 ###  Find the role of free cancellation policy using Expedia data during the COVID-19 pandemic.
   
-##### Author: Chenxu (Robin) Mao, Zheyu (Esper) Zhou, Jingyu (Cowell) Tang
+###### Author: Chenxu (Robin) Mao, Zheyu (Esper) Zhou, Jingyu (Cowell) Tang
 ___
 
 This project analyse three questions using different statistical methods with data given by Expedia.
@@ -16,4 +16,4 @@ This project analyse three questions using different statistical methods with da
   > one proportional hypothesis test
 
 ___
-##### *A final project for STA130H1: An Introduction to Statistical Reasoning and Data Science, University of Toronto St.George. Winter 2021.*
+*A final project for STA130H1: An Introduction to Statistical Reasoning and Data Science, University of Toronto St.George. Winter 2021.*
